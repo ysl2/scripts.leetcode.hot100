@@ -323,22 +323,20 @@ class Solution:
 ### [54. 螺旋矩阵 (Spiral Matrix)](https://leetcode.cn/problems/spiral-matrix/description)
 
 ```python
-DIRS = ((0, 1), (1, 0), (0, -1), (-1, 0))
+tmp = ((0, 1), (1, 0), (0, -1), (-1, 0))
 
 class Solution:
     def spiralOrder(self, matrix: List[List[int]]) -> List[int]:
         m, n = len(matrix), len(matrix[0])
         res = []
-        i, j = 0, -1
-        di = 0
+        i, j, k = 0, -1, 0
         size = m * n
         while len(res) < size:
-            dx, dy = DIRS[di]
             for _ in range(n):
-                i += dx
-                j += dy
+                i += tmp[k][0]
+                j += tmp[k][1]
                 res.append(matrix[i][j])
-            di = (di + 1) % 4
+            k = (k + 1) % 4
             n, m = m - 1, n
         return res
 ```
