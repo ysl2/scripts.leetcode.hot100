@@ -763,13 +763,13 @@ class Solution:
 class Solution:
     def inorderTraversal(self, root: Optional[TreeNode]) -> List[int]:
         res = []
-        stack = [root]
-        while stack:
-            x = stack.pop()
+        st = [root]
+        while st:
+            x = st.pop()
             if isinstance(x, int):
                 res.append(x)
             elif isinstance(x, TreeNode):
-                stack.extend([x.right, x.val, x.left])
+                st += [x.right, x.val, x.left]
         return res
 ```
 
@@ -794,16 +794,16 @@ class Solution:
 class Solution:
     def maxDepth(self, root: Optional[TreeNode]) -> int:
         q = deque([root])
-        max_depth = 0
+        res = 0
         while q:
+            res += 1
             for _ in range(len(q)):
-                node = q.popleft()
-                if node.left:
-                    q.append(node.left)
-                if node.right:
-                    q.append(node.right)
-            max_depth += 1
-        return max_depth
+                x = q.popleft()
+                if x.left:
+                    q.append(x.left)
+                if x.right:
+                    q.append(x.right)
+        return res
 ```
 
 ### [226. 翻转二叉树 (Invert Binary Tree)](https://leetcode.cn/problems/invert-binary-tree/description)
@@ -1046,16 +1046,12 @@ class Solution:
 
 class Solution:
     def buildTree(self, preorder: List[int], inorder: List[int]) -> Optional[TreeNode]:
-        mp = {val: i for i, val in enumerate(inorder)}
+        mp = {v: k for k, v in enumerate(inorder)}
         def dfs(root, left, right):
             if left > right:
                 return
             i = mp[preorder[root]]
-            return TreeNode(
-                val=preorder[root],
-                left=dfs(root + 1, left, i - 1),
-                right=dfs(i - left + 1 + root, i + 1, right)
-            )
+            return TreeNode(preorder[root], dfs(root + 1, left, i - 1), dfs(i - left + 1 + root, i + 1, right))
         return dfs(0, 0, len(inorder) - 1)
 ```
 
