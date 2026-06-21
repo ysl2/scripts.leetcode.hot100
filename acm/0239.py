@@ -1,0 +1,14 @@
+from collections import deque
+
+def main(nums, k):
+    q = deque()
+    res = []
+    for i in range(len(nums)):
+        while q and nums[q[-1]] < nums[i]:
+            q.pop()
+        q.append(i)
+        if i - q[0] + 1 > k:
+            q.popleft()
+        if i >= k - 1:
+            res.append(nums[q[0]])
+    return res

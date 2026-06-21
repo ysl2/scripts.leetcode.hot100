@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>0239 滑动窗口最大值可视化</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --ink: #172033;
+      --muted: #667085;
+      --line: #d8deea;
+      --accent: #0f766e;
+      --accent-2: #2563eb;
+      --warn: #b45309;
+      --danger: #b91c1c;
+      --soft: #e8f5f3;
+      --code: #111827;
+      --code-soft: #243044;
+      --window: #e0f2fe;
+      --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, #eef4ff 0, rgba(238, 244, 255, 0) 360px),
+        var(--bg);
+    }
+
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 36px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 0;
+      max-width: 760px;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 15px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      height: 36px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--accent);
+      background: #fff;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) 92px auto;
+      gap: 12px;
+      align-items: end;
+      padding: 16px;
+      margin-bottom: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0 12px;
+      color: var(--ink);
+      background: #fff;
+      font: inherit;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--accent-2);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    button {
+      height: 42px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 0 14px;
+      color: #fff;
+      background: var(--accent);
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      background: #115e59;
+    }
+
+    button.secondary {
+      color: var(--ink);
+      background: #fff;
+      border-color: var(--line);
+    }
+
+    button.secondary:hover {
+      background: #f8fafc;
+      border-color: #b7c2d7;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    section,
+    aside {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .visual {
+      padding: 18px;
+    }
+
+    .stage-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .step-pill {
+      min-width: 118px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: var(--soft);
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .array-wrap {
+      overflow-x: auto;
+      padding: 8px 0 12px;
+    }
+
+    .array {
+      min-height: 198px;
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(58px, 1fr);
+      gap: 10px;
+      align-items: end;
+    }
+
+    .cell {
+      position: relative;
+      display: grid;
+      grid-template-rows: 1fr auto auto;
+      min-height: 178px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 8px 7px;
+      background: #f8fafc;
+      transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+    }
+
+    .cell.in-window {
+      background: var(--window);
+      border-color: #7dd3fc;
+    }
+
+    .cell.in-queue {
+      border-color: var(--accent);
+    }
+
+    .cell.current {
+      transform: translateY(-5px);
+      border-color: var(--accent-2);
+      box-shadow: 0 10px 22px rgba(37, 99, 235, 0.14);
+    }
+
+    .bar-box {
+      height: 110px;
+      display: flex;
+      align-items: end;
+      justify-content: center;
+    }
+
+    .bar {
+      width: 100%;
+      min-height: 12px;
+      border-radius: 7px 7px 3px 3px;
+      background: linear-gradient(180deg, #2dd4bf, #0f766e);
+      transition: height 0.2s ease, background 0.2s ease;
+    }
+
+    .cell.current .bar {
+      background: linear-gradient(180deg, #60a5fa, #2563eb);
+    }
+
+    .cell.leaving .bar {
+      background: linear-gradient(180deg, #f59e0b, #b45309);
+    }
+
+    .cell.removed .bar {
+      background: linear-gradient(180deg, #f87171, #b91c1c);
+      opacity: 0.72;
+    }
+
+    .value {
+      margin-top: 8px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .index {
+      margin-top: 4px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .state-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .state-box {
+      min-height: 128px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcff;
+    }
+
+    .state-title {
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .queue,
+    .result {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      min-height: 50px;
+    }
+
+    .queue-item,
+    .result-item {
+      min-width: 56px;
+      border-radius: 8px;
+      padding: 8px 10px;
+      text-align: center;
+      font-weight: 900;
+      background: #eefaf7;
+      color: var(--accent);
+      border: 1px solid #99f6e4;
+    }
+
+    .queue-item small {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .result-item {
+      background: #eff6ff;
+      color: var(--accent-2);
+      border-color: #bfdbfe;
+    }
+
+    .empty {
+      color: #98a2b3;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .message {
+      min-height: 70px;
+      margin-top: 14px;
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      padding: 12px 14px;
+      background: #f8fbff;
+      color: #344054;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .message strong {
+      color: var(--ink);
+    }
+
+    aside {
+      overflow: hidden;
+    }
+
+    .code-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcff;
+    }
+
+    pre {
+      margin: 0;
+      padding: 12px 0;
+      overflow-x: auto;
+      background: var(--code);
+      color: #d1d5db;
+      font-size: 13px;
+      line-height: 1.62;
+    }
+
+    .code-line {
+      display: grid;
+      grid-template-columns: 38px 1fr;
+      min-width: 420px;
+      padding: 0 14px 0 0;
+    }
+
+    .line-no {
+      color: #778195;
+      text-align: right;
+      padding-right: 10px;
+      user-select: none;
+    }
+
+    .code-text {
+      white-space: pre;
+    }
+
+    .code-line.active {
+      background: var(--code-soft);
+      color: #fff;
+    }
+
+    .code-line.active .line-no {
+      color: #93c5fd;
+    }
+
+    .trace {
+      max-height: 214px;
+      overflow: auto;
+      padding: 14px 16px;
+      border-top: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .trace h2 {
+      margin-bottom: 10px;
+    }
+
+    .trace-item {
+      display: grid;
+      grid-template-columns: 68px 1fr;
+      gap: 10px;
+      padding: 8px 0;
+      border-top: 1px solid #eef2f7;
+      color: #475467;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .trace-item:first-of-type {
+      border-top: 0;
+    }
+
+    .trace-item b {
+      color: var(--accent-2);
+    }
+
+    .speed {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input[type="range"] {
+      width: 160px;
+      accent-color: var(--accent);
+    }
+
+    .error {
+      display: none;
+      margin: -4px 0 14px;
+      padding: 10px 12px;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      color: var(--danger);
+      background: #fff5f5;
+      font-weight: 700;
+    }
+
+    @media (max-width: 920px) {
+      header,
+      .toolbar,
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .buttons {
+        justify-content: flex-start;
+      }
+
+      .state-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      main {
+        width: min(100% - 20px, 1180px);
+        padding-top: 18px;
+      }
+
+      .visual {
+        padding: 14px;
+      }
+
+      .array {
+        grid-auto-columns: 56px;
+      }
+
+      input[type="range"] {
+        width: 120px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>0239 滑动窗口最大值</h1>
+        <p class="subtitle">对应 0239.py：用一个保存下标的单调递减队列，让队首始终指向当前窗口里的最大值。</p>
+      </div>
+      <div class="badge">Deque + Window</div>
+    </header>
+
+    <div class="toolbar">
+      <label>
+        数组 nums
+        <input id="numsInput" type="text" value="1, 3, -1, -3, 5, 3, 6, 7" spellcheck="false">
+      </label>
+      <label>
+        窗口 k
+        <input id="kInput" type="number" min="1" value="3">
+      </label>
+      <div>
+        <div class="buttons">
+          <button id="buildBtn" class="secondary" type="button">生成</button>
+          <button id="resetBtn" class="secondary" type="button">重置</button>
+          <button id="stepBtn" type="button">下一步</button>
+          <button id="playBtn" type="button">播放</button>
+        </div>
+        <div class="speed">
+          速度
+          <input id="speedInput" type="range" min="450" max="1800" value="900" step="50">
+        </div>
+      </div>
+    </div>
+
+    <div id="error" class="error"></div>
+
+    <div class="layout">
+      <section class="visual" aria-label="可视化区域">
+        <div class="stage-top">
+          <h2>数组与窗口</h2>
+          <div id="stepPill" class="step-pill">Step 0 / 0</div>
+        </div>
+
+        <div class="array-wrap">
+          <div id="array" class="array"></div>
+        </div>
+
+        <div class="state-grid">
+          <div class="state-box">
+            <div class="state-title">队列 q：保存下标，值保持递减</div>
+            <div id="queue" class="queue"></div>
+          </div>
+          <div class="state-box">
+            <div class="state-title">结果 res：每个窗口的最大值</div>
+            <div id="result" class="result"></div>
+          </div>
+        </div>
+
+        <div id="message" class="message"></div>
+      </section>
+
+      <aside aria-label="代码和执行日志">
+        <div class="code-head">
+          <h2>0239.py</h2>
+          <span class="step-pill" id="linePill">line 1</span>
+        </div>
+        <pre id="code"></pre>
+        <div class="trace">
+          <h2>执行记录</h2>
+          <div id="trace"></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const codeLines = [
+      'from collections import deque',
+      '',
+      'def main(nums, k):',
+      '    q = deque()',
+      '    res = []',
+      '    for i in range(len(nums)):',
+      '        while q and nums[q[-1]] < nums[i]:',
+      '            q.pop()',
+      '        q.append(i)',
+      '        if i - q[0] + 1 > k:',
+      '            q.popleft()',
+      '        if i >= k - 1:',
+      '            res.append(nums[q[0]])',
+      '    return res'
+    ];
+
+    const els = {
+      numsInput: document.getElementById('numsInput'),
+      kInput: document.getElementById('kInput'),
+      buildBtn: document.getElementById('buildBtn'),
+      resetBtn: document.getElementById('resetBtn'),
+      stepBtn: document.getElementById('stepBtn'),
+      playBtn: document.getElementById('playBtn'),
+      speedInput: document.getElementById('speedInput'),
+      error: document.getElementById('error'),
+      array: document.getElementById('array'),
+      queue: document.getElementById('queue'),
+      result: document.getElementById('result'),
+      message: document.getElementById('message'),
+      code: document.getElementById('code'),
+      trace: document.getElementById('trace'),
+      stepPill: document.getElementById('stepPill'),
+      linePill: document.getElementById('linePill')
+    };
+
+    let nums = [];
+    let k = 3;
+    let steps = [];
+    let stepIndex = 0;
+    let playing = false;
+    let timer = null;
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    function renderCode(activeLine) {
+      els.code.innerHTML = codeLines.map((line, idx) => {
+        const lineNo = idx + 1;
+        const active = lineNo === activeLine ? ' active' : '';
+        return `<div class="code-line${active}" data-line="${lineNo}">
+          <span class="line-no">${lineNo}</span>
+          <span class="code-text">${escapeHtml(line || ' ')}</span>
+        </div>`;
+      }).join('');
+      els.linePill.textContent = `line ${activeLine || 1}`;
+    }
+
+    function parseInput() {
+      const parts = els.numsInput.value
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean);
+      const parsed = parts.map(Number);
+      const nextK = Number(els.kInput.value);
+
+      if (!parts.length || parsed.some(Number.isNaN)) {
+        throw new Error('nums 需要是用逗号分隔的数字，例如：1, 3, -1, -3, 5');
+      }
+      if (!Number.isInteger(nextK) || nextK < 1 || nextK > parsed.length) {
+        throw new Error('k 需要是 1 到 nums 长度之间的整数。');
+      }
+
+      return { parsed, nextK };
+    }
+
+    function snapshot(line, title, q, res, i, extra = {}) {
+      return {
+        line,
+        title,
+        q: [...q],
+        res: [...res],
+        i,
+        removed: extra.removed ?? null,
+        leaving: extra.leaving ?? null,
+        windowLeft: Math.max(0, i - k + 1),
+        note: extra.note || ''
+      };
+    }
+
+    function buildSteps() {
+      const q = [];
+      const res = [];
+      const built = [
+        snapshot(4, '初始化 q = deque()，队列暂时为空。', q, res, -1),
+        snapshot(5, '初始化 res = []，准备保存每个窗口的最大值。', q, res, -1)
+      ];
+
+      for (let i = 0; i < nums.length; i += 1) {
+        built.push(snapshot(6, `进入循环：i = ${i}，nums[i] = ${nums[i]}。`, q, res, i));
+
+        while (q.length && nums[q[q.length - 1]] < nums[i]) {
+          const removed = q[q.length - 1];
+          built.push(snapshot(
+            7,
+            `队尾下标 ${removed} 的值 ${nums[removed]} 小于当前值 ${nums[i]}，它不可能再成为最大值。`,
+            q,
+            res,
+            i,
+            { removed }
+          ));
+          q.pop();
+          built.push(snapshot(8, `执行 q.pop()，移除队尾下标 ${removed}。`, q, res, i, { removed }));
+        }
+
+        q.push(i);
+        built.push(snapshot(9, `执行 q.append(${i})，把当前下标加入队尾。`, q, res, i));
+
+        if (i - q[0] + 1 > k) {
+          const leaving = q[0];
+          built.push(snapshot(
+            10,
+            `队首下标 ${leaving} 已经离开长度为 ${k} 的窗口。`,
+            q,
+            res,
+            i,
+            { leaving }
+          ));
+          q.shift();
+          built.push(snapshot(11, `执行 q.popleft()，移除过期下标 ${leaving}。`, q, res, i, { leaving }));
+        } else {
+          built.push(snapshot(10, `队首仍在当前窗口内，不需要移除。`, q, res, i));
+        }
+
+        if (i >= k - 1) {
+          built.push(snapshot(12, `窗口已经形成，队首 q[0] = ${q[0]} 指向当前最大值。`, q, res, i));
+          res.push(nums[q[0]]);
+          built.push(snapshot(13, `执行 res.append(nums[q[0]])，追加最大值 ${nums[q[0]]}。`, q, res, i));
+        } else {
+          built.push(snapshot(12, `当前元素数量还不足 ${k} 个，暂时不输出最大值。`, q, res, i));
+        }
+      }
+
+      built.push(snapshot(14, `遍历结束，返回 res = [${res.join(', ')}]。`, q, res, nums.length - 1));
+      return built;
+    }
+
+    function barHeight(value) {
+      const min = Math.min(...nums);
+      const max = Math.max(...nums);
+      if (max === min) return 72;
+      return 22 + ((value - min) / (max - min)) * 88;
+    }
+
+    function renderArray(step) {
+      const qSet = new Set(step.q);
+      const left = step.i < 0 ? -1 : step.windowLeft;
+      const right = step.i;
+
+      els.array.innerHTML = nums.map((num, idx) => {
+        const classes = ['cell'];
+        if (idx >= left && idx <= right) classes.push('in-window');
+        if (qSet.has(idx)) classes.push('in-queue');
+        if (idx === step.i) classes.push('current');
+        if (idx === step.removed) classes.push('removed');
+        if (idx === step.leaving) classes.push('leaving');
+        return `<div class="${classes.join(' ')}">
+          <div class="bar-box"><div class="bar" style="height:${barHeight(num)}px"></div></div>
+          <div class="value">${num}</div>
+          <div class="index">idx ${idx}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderQueue(step) {
+      if (!step.q.length) {
+        els.queue.innerHTML = '<span class="empty">空队列</span>';
+        return;
+      }
+      els.queue.innerHTML = step.q.map(index => {
+        return `<div class="queue-item">${index}<small>nums[${index}] = ${nums[index]}</small></div>`;
+      }).join('');
+    }
+
+    function renderResult(step) {
+      if (!step.res.length) {
+        els.result.innerHTML = '<span class="empty">尚无输出</span>';
+        return;
+      }
+      els.result.innerHTML = step.res.map(value => `<div class="result-item">${value}</div>`).join('');
+    }
+
+    function renderTrace() {
+      const visible = steps.slice(0, stepIndex + 1).slice(-18);
+      els.trace.innerHTML = visible.map((step, idx) => {
+        const realIndex = stepIndex - visible.length + idx + 2;
+        return `<div class="trace-item"><b>#${realIndex}</b><span>${escapeHtml(step.title)}</span></div>`;
+      }).join('');
+      els.trace.scrollTop = els.trace.scrollHeight;
+    }
+
+    function render() {
+      const step = steps[stepIndex];
+      renderArray(step);
+      renderQueue(step);
+      renderResult(step);
+      renderCode(step.line);
+      renderTrace();
+      els.message.innerHTML = `<strong>${escapeHtml(step.title)}</strong>`;
+      els.stepPill.textContent = `Step ${stepIndex + 1} / ${steps.length}`;
+      els.stepBtn.disabled = stepIndex >= steps.length - 1;
+      els.playBtn.textContent = playing ? '暂停' : '播放';
+    }
+
+    function stop() {
+      playing = false;
+      window.clearTimeout(timer);
+      timer = null;
+      if (steps.length) render();
+    }
+
+    function nextStep() {
+      if (stepIndex < steps.length - 1) {
+        stepIndex += 1;
+        render();
+        return true;
+      }
+      stop();
+      return false;
+    }
+
+    function playLoop() {
+      if (!playing) return;
+      const advanced = nextStep();
+      if (!advanced) return;
+      timer = window.setTimeout(playLoop, Number(els.speedInput.value));
+    }
+
+    function play() {
+      if (playing) {
+        stop();
+        return;
+      }
+      if (stepIndex >= steps.length - 1) {
+        stepIndex = 0;
+      }
+      playing = true;
+      render();
+      timer = window.setTimeout(playLoop, Number(els.speedInput.value));
+    }
+
+    function rebuild() {
+      try {
+        stop();
+        const input = parseInput();
+        nums = input.parsed;
+        k = input.nextK;
+        steps = buildSteps();
+        stepIndex = 0;
+        els.error.style.display = 'none';
+        els.error.textContent = '';
+        render();
+      } catch (error) {
+        els.error.textContent = error.message;
+        els.error.style.display = 'block';
+      }
+    }
+
+    function reset() {
+      stop();
+      stepIndex = 0;
+      render();
+    }
+
+    els.buildBtn.addEventListener('click', rebuild);
+    els.resetBtn.addEventListener('click', reset);
+    els.stepBtn.addEventListener('click', () => {
+      stop();
+      nextStep();
+    });
+    els.playBtn.addEventListener('click', play);
+    els.speedInput.addEventListener('input', () => {
+      if (playing) {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(playLoop, Number(els.speedInput.value));
+      }
+    });
+
+    rebuild();
+  </script>
+</body>
+</html>
